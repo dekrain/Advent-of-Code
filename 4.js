@@ -1,7 +1,6 @@
 // I'm lazy so js ;)
 
 const fs = require('fs');
-const { parse } = require('path');
 
 const txt = fs.readFileSync('./4.input', {encoding: 'ascii'});
 
