@@ -31,19 +31,28 @@ for rule in data:
 def task1():
     graph = { ('shiny', 'gold'): False }
     # Bag in question doesn't contain itself
+    depth_max = 0
+    depth = 0
 
     # Traverse the rules
     def traverse(color):
+        nonlocal depth, depth_max
+        depth += 1
+        depth_max = max(depth_max, depth)
         if color == ('shiny', 'gold'):
+            depth -= 1
             return True
         if color in graph:
+            depth -= 1
             return graph[color]
         d = rules[color]
         for child in d:
             if traverse(child[1:3]):
                 graph[color] = True
+                depth -= 1
                 return True
         graph[color] = False
+        depth -= 1
         return False
 
     total = 0
@@ -53,22 +62,32 @@ def task1():
         if traverse(color):
             total += 1
 
-    print('The total is: {}'.format(total))
+    assert depth == 0
+    print('The total is: {} with max depth: {}'.format(total, depth_max))
 
 def task2():
     graph = {}
+    depth_max = 0
+    depth = 0
 
     # Traverse the rules & counts
     def traverse(color):
+        nonlocal depth, depth_max
+        depth += 1
+        depth_max = max(depth_max, depth)
         if color in graph:
+            depth -= 1
             return graph[color]
         d = rules[color]
         count = 0
         for child in d:
             count += child[0] * (1 + traverse(child[1:3]))
         graph[color] = count
+        depth -= 1
         return count
 
-    print('Total bags contained is: {}'.format(traverse(('shiny', 'gold'))))
+    assert depth == 0
+    print('Total bags contained is: {} with max depth: {}'.format(traverse(('shiny', 'gold')), depth_max))
 
+task1()
 task2()
