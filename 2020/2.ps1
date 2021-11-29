@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 # Part I.
 Get-Content ./2.input |
     Where-Object {

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 with open('7.input', 'r') as f:
     data = f.read().splitlines()
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // I'm lazy so js ;)
 
 const fs = require('fs');
