@@ -38,6 +38,6 @@ AoC_DEF_TASK(2) {
     }
     if (!std::feof(f))
 		return 2;
-	std::printf("Part 1: %lu\nPart 2: %lu\n", p1dep * p1lat, p2dep * p1lat);
+	std::printf("Part 1: %zu\nPart 2: %zu\n", p1dep * p1lat, p2dep * p1lat);
 	return 0;
 }
