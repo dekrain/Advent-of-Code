@@ -25,12 +25,21 @@ int main() {
 		if (!t) {
 			std::puts("Task missing!");
 		} else {
-			char buf[10];
-			std::snprintf(buf, sizeof buf, "%d.input", t->day);
+			char buf[15];
+			std::snprintf(buf, sizeof buf, "%d.input.sam", t->day);
 			std::FILE* f = std::fopen(buf, "r");
+			if (f) {
+				std::puts("-=EXAMPLE=-");
+				if (int res = t->run(f, true))
+					return res;
+				std::fclose(f);
+				std::puts("-=TASK=-");
+			}
+			std::snprintf(buf, sizeof buf, "%d.input", t->day);
+			f = std::fopen(buf, "r");
 			if (!f)
 				return 1;
-			if (int res = t->run(f))
+			if (int res = t->run(f, false))
 				return res;
 			std::fclose(f);
 		}

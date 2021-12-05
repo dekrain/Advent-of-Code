@@ -5,11 +5,13 @@
 struct AoCTask;
 extern void AoCAddTask(AoCTask& t) noexcept;
 
+using AoCTaskProg = int (std::FILE* f, bool is_sample);
+
 struct AoCTask {
 	unsigned int day;
-	int (*run)(std::FILE*);
+	AoCTaskProg* run;
 
-	AoCTask(unsigned day = 0, int (*run)(std::FILE*) = nullptr)
+	AoCTask(unsigned day = 0, AoCTaskProg* run = nullptr)
 		noexcept : day(day), run(run)
 	{
 		if (day)
@@ -18,7 +20,6 @@ struct AoCTask {
 };
 
 #define AoC_DEF_TASK(n) \
-	static int _task_##n##_run_ (std::FILE*); \
+	static AoCTaskProg _task_##n##_run_; \
 	AoCTask _task_##n##_ (n, &_task_##n##_run_); \
-	static int _task_##n##_run_ (std::FILE* f)
-
+	static int _task_##n##_run_ (std::FILE* f, bool is_sample)
