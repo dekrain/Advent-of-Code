@@ -1,2 +1,10 @@
 # Main executable
-AoC
+AoC*
+[0-9].*
+[0-9][0-9].*
+![0-9].cpp
+![0-9][0-9].cpp
+![0-9].input
+![0-9][0-9].input
+![0-9].input.sam
+![0-9][0-9].input.sam

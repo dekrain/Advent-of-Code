@@ -2,4 +2,4 @@
 if [ -z "$CXX" ]; then
 	CXX=c++
 fi
-"$CXX" -std=c++17 -o AoC *.cpp
+"$CXX" -std=c++17 -o AoC *.cpp -Ofast "$@"
