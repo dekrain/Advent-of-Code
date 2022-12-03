@@ -53,6 +53,11 @@ macro_rules! lisp {
         $crate::line::FileLineIterator::new($path)
     };
     {
+        (line-iter $str:tt)
+    } => {
+        $str.lines()
+    };
+    {
         (for-each ($var:ident $expr:tt) $($body:tt)+)
     } => {
         for $var in lisp!{$expr} {

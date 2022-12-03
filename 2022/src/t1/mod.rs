@@ -1,10 +1,9 @@
 use crate::lisp;
-use std::{fs, io::Read};
 
-fn task_lisp() -> u32 {
+fn task_lisp(input: &str) -> u32 {
     lisp! {
         (let (
-                lines (slurp-iter "1.input")
+                lines (line-iter input)
                 sum (cell 0)
                 current (cell 0)
             ) (for-each (line lines)
@@ -83,17 +82,14 @@ fn task2(input: &str) -> u32 {
     top[0] + top[1] + top[2]
 }
 
-pub fn task() {
-	if true {
-        println!("{}", task_lisp());
-    } else {
-        let mut file = fs::File::open("1.input").unwrap();
-        let mut buf = String::new();
-        file.read_to_string(&mut buf).unwrap();
+pub fn task(input: &str) {
+    println!("{}", 
         if false {
-            println!("{}", task1(buf.as_str()));
+            task_lisp(input)
+        } else if true {
+            task1(input)
         } else {
-            println!("{}", task2(buf.as_str()));
+            task2(input)
         }
-    }
+    );
 }
