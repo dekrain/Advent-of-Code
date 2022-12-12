@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![feature(iter_array_chunks)]
 
 use std::{fs, io, os::unix::io::AsFd};
 
@@ -9,6 +10,7 @@ mod mmap;
 // Tasks
 mod t1;
 mod t2;
+mod t3;
 
 fn open_input<P: AsRef<std::path::Path>>(path: P) -> io::Result<mmap::MemoryView> {
     let file = fs::File::open(path)?;
@@ -27,5 +29,5 @@ fn main() {
             $(do_task(concat!("inputs/", stringify!($num), ".input"), $num::task);)*
         };
     }
-    task![ t1 t2 ];
+    task![ t1 t2 t3 ];
 }
