@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-#![feature(iter_array_chunks)]
+#![feature(iter_array_chunks, iter_next_chunk)]
 
 use std::{fs, io, os::unix::io::AsFd, fmt::Display};
 
@@ -11,6 +11,7 @@ mod mmap;
 mod t1;
 mod t2;
 mod t3;
+mod t4;
 
 trait TaskPrint {
     fn print(task: u32, result: Self);
@@ -45,5 +46,5 @@ fn main() {
             $(do_task(concat!("inputs/", stringify!($id), ".input"), $id, $impl::task);)*
         };
     }
-    task![ t1 1 t2 2 t3 3 ];
+    task![ t1 1 t2 2 t3 3 t4 4 ];
 }
