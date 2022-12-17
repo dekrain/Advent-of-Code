@@ -16,9 +16,7 @@ impl From<u8> for Move {
     #[inline(always)]
     fn from(i: u8) -> Move {
         match i {
-            0 => Move::Rock,
-            1 => Move::Paper,
-            2 => Move::Scissors,
+            0..=2 => unsafe { std::mem::transmute(i) },
             _ => panic!("Invalid move"),
         }
     }
@@ -27,15 +25,15 @@ impl From<u8> for Move {
 impl From<Move> for u8 {
     #[inline(always)]
     fn from(m: Move) -> Self {
-        unsafe { std::mem::transmute(m) }
+        m as u8
     }
 }
 
 // Task input is: ([ABC] ' ' [XYZ] '\n')+
-pub fn task(input: &str) {
+pub fn task(input: &str) -> (usize, usize) {
     let input = input.as_bytes();
     assert_eq!(input.len() & 3, 0, "Input length is not a multiple of 4");
-    {
+    ({
         // Part 1
         let mut total: usize = 0;
         for idx in 0..(input.len() >> 2) {
@@ -43,8 +41,8 @@ pub fn task(input: &str) {
             let response = Move::from(input[(idx << 2) + 2] - b'X');
             total += u8::from(response) as usize + 1 + response.outcome(challange);
         }
-        println!("{total}");
-    }
+        total
+    },
     {
         // Part 2
         let mut total: usize = 0;
@@ -53,6 +51,6 @@ pub fn task(input: &str) {
             let outcome = (input[(idx << 2) + 2] - b'X') as usize;
             total += ((challange as usize + outcome + 2) % 3) as usize + 1 + outcome * 3;
         }
-        println!("{total}");
-    }
+        total
+    })
 }

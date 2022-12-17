@@ -82,14 +82,12 @@ fn task2(input: &str) -> u32 {
     top[0] + top[1] + top[2]
 }
 
-pub fn task(input: &str) {
-    println!("{}", 
-        if false {
-            task_lisp(input)
-        } else if true {
-            task1(input)
-        } else {
-            task2(input)
-        }
-    );
+pub fn task(input: &str) -> (u32,) {
+    (if false {
+        task_lisp(input)
+    } else if true {
+        task1(input)
+    } else {
+        task2(input)
+    },)
 }

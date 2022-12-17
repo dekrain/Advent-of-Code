@@ -11,8 +11,8 @@ fn settify(s: &str) -> u64 {
     set
 }
 
-pub fn task(input: &str) {
-    {
+pub fn task(input: &str) -> (usize, usize) {
+    ({
         // Part 1
         let mut total = 0usize;
         for line in input.lines() {
@@ -22,8 +22,8 @@ pub fn task(input: &str) {
             let item = item.trailing_zeros();
             total += item as usize;
         }
-        println!("{total}");
-    }
+        total
+    },
     {
         // Part 2
         let mut total = 0usize;
@@ -32,6 +32,6 @@ pub fn task(input: &str) {
             let item = item.trailing_zeros();
             total += item as usize;
         }
-        println!("{total}");
-    }
+        total
+    })
 }
