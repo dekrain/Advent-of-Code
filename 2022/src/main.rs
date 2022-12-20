@@ -13,6 +13,7 @@ mod t2;
 mod t3;
 mod t4;
 mod t5;
+mod t6;
 
 trait TaskPrint {
     fn print(task: u32, result: Self);
@@ -49,5 +50,5 @@ fn main() {
     macro task($($impl:ident $id:literal)*) {
         $(do_task(concat!("inputs/", stringify!($id), ".input"), $id, $impl::task);)*
     }
-    task![ t1 1 t2 2 t3 3 t4 4 t5 5 ];
+    task![ t1 1 t2 2 t3 3 t4 4 t5 5 t6 6 ];
 }
