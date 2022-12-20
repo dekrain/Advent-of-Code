@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-#![feature(iter_array_chunks, iter_next_chunk)]
+#![feature(iter_array_chunks, iter_next_chunk, decl_macro)]
 
 use std::{fs, io, os::unix::io::AsFd, fmt::Display};
 
@@ -12,6 +12,7 @@ mod t1;
 mod t2;
 mod t3;
 mod t4;
+mod t5;
 
 trait TaskPrint {
     fn print(task: u32, result: Self);
@@ -29,6 +30,10 @@ impl<T: Display, U: Display> TaskPrint for (T, U) {
     }
 }
 
+/*impl<const N: usize> TaskPrint for [u8; N] {
+    fn print(task: u32, result: Self) {}
+}*/
+
 fn open_input<P: AsRef<std::path::Path>>(path: P) -> io::Result<mmap::MemoryView> {
     let file = fs::File::open(path)?;
     let size = file.metadata()?.len() as usize;
@@ -41,10 +46,8 @@ fn do_task<P: AsRef<std::path::Path>, Res: TaskPrint>(input_path: P, id: u32, ta
 }
 
 fn main() {
-    macro_rules! task {
-        [$($impl:ident $id:literal)*] => {
-            $(do_task(concat!("inputs/", stringify!($id), ".input"), $id, $impl::task);)*
-        };
+    macro task($($impl:ident $id:literal)*) {
+        $(do_task(concat!("inputs/", stringify!($id), ".input"), $id, $impl::task);)*
     }
-    task![ t1 1 t2 2 t3 3 t4 4 ];
+    task![ t1 1 t2 2 t3 3 t4 4 t5 5 ];
 }
