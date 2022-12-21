@@ -1,17 +1,27 @@
 //! Overengineering, part 1
 
-use std::{str::{Lines, FromStr}, collections::HashMap, hash::{Hash, BuildHasher}};
+use std::str::{Lines, FromStr};
+use std::collections::{HashMap, hash_map};
+use std::hash::{Hash, BuildHasher};
 
-#[allow(unused)]
-trait HierarchyReceiver {
+trait HierarchyReceiver: {
     type DirectoryData: Default;
     type FileData: Default;
     const NEEDS_STRICT_FINISH_DIR: bool = false;
-
-    fn new_dir(parent: &mut Directory<Self>, dir: &mut Directory<Self>) {}
-    fn new_file(parent: &mut Directory<Self>, file: &mut File<Self>) -> bool { true }
-    fn finish_dir(parent: Option<&mut Directory<Self>>, dir: &mut Directory<Self>) {}
 }
+
+#[allow(unused)]
+trait Traverser<Receiver: ?Sized + HierarchyReceiver> {
+    fn new_dir(&mut self, parent: &mut Directory<Receiver>, dir: &mut Directory<Receiver>) {}
+    fn new_file(&mut self, parent: &mut Directory<Receiver>, file: &mut File<Receiver>) -> bool { true }
+    fn finish_dir(&mut self, parent: Option<&mut Directory<Receiver>>, dir: &mut Directory<Receiver>) {}
+}
+
+impl HierarchyReceiver for () {
+    type DirectoryData = ();
+    type FileData = ();
+}
+impl<Receiver: ?Sized + HierarchyReceiver> Traverser<Receiver> for () {}
 
 struct Directory<Receiver: ?Sized + HierarchyReceiver> {
     children: HashMap<String, HierarchyEntry<Receiver>>,
@@ -74,7 +84,11 @@ impl<Receiver: ?Sized + HierarchyReceiver> Hierarchy<Receiver> {
         &self.root
     }
 
-    pub fn parse(&mut self, mut input_stream: Lines) {
+    /// Parses the filesystem tree, using `traverser` to act on nodes
+    ///
+    /// # Safety
+    /// I checked it with miri, so it must be safe, right?
+    pub fn parse<T: Traverser<Receiver>>(&mut self, mut input_stream: Lines, mut traverser: T)-> T {
         let mut stack: Vec<*mut Directory<Receiver>> = Vec::default();
         loop {
             let mut line = match input_stream.next() {
@@ -104,7 +118,7 @@ impl<Receiver: ?Sized + HierarchyReceiver> Hierarchy<Receiver> {
                                     let (size, name) = sub.split_once(' ').unwrap();
                                     let size = usize::from_str(size).unwrap();
                                     let mut file = File::new(size);
-                                    if Receiver::new_file(parent, &mut file) {
+                                    if traverser.new_file(parent, &mut file) {
                                         insert_map(&mut parent.children, name.into(), HierarchyEntry::File(file));
                                     }
                                 }
@@ -115,7 +129,7 @@ impl<Receiver: ?Sized + HierarchyReceiver> Hierarchy<Receiver> {
                                 "/" => {
                                     if !stack.is_empty() {
                                         if Receiver::NEEDS_STRICT_FINISH_DIR {
-                                            unsafe{ self.pop_dirs(&mut stack); }
+                                            unsafe{ self.pop_dirs(&mut stack, &mut traverser); }
                                         } else {
                                             stack.clear();
                                         }
@@ -124,7 +138,7 @@ impl<Receiver: ?Sized + HierarchyReceiver> Hierarchy<Receiver> {
                                 ".." => {
                                     let dir = unsafe{&mut *stack.pop().unwrap()};
                                     let parent = unsafe{&mut *stack.last().map(|a| *a).unwrap_or(&mut self.root)};
-                                    Receiver::finish_dir(Some(parent), dir);
+                                    traverser.finish_dir(Some(parent), dir);
                                 }
                                 dir => {
                                     let parent = unsafe{&mut *stack.last().map(|a| *a).unwrap_or(&mut self.root)};
@@ -140,26 +154,79 @@ impl<Receiver: ?Sized + HierarchyReceiver> Hierarchy<Receiver> {
                     }
                     break;
                 }
+            } else {
+                panic!("Invalid command line");
             }
         }
 
         if Receiver::NEEDS_STRICT_FINISH_DIR && !stack.is_empty() {
-            unsafe{ self.pop_dirs(&mut stack); }
+            unsafe{ self.pop_dirs(&mut stack, &mut traverser); }
         }
 
-        Receiver::finish_dir(None, &mut self.root);
+        traverser.finish_dir(None, &mut self.root);
+        traverser
+    }
+
+    /// Walk the parsed tree, as if by [`parse`]
+    /// 
+    /// # Safety
+    /// I checked it with miri, so it must be safe, right?
+    ///
+    /// [`parse`]: Hierarchy::parse
+    pub fn walk<T: Traverser<Receiver>>(&mut self, mut traverser: T) -> T {
+        struct Entry<'a, R: ?Sized + HierarchyReceiver> {
+            dir: *mut Directory<R>,
+            iter: hash_map::ValuesMut<'a, String, HierarchyEntry<R>>,
+        }
+        impl<'a, R: ?Sized + HierarchyReceiver> Entry<'a, R> {
+            #[inline]
+            fn new(dir: &'a mut Directory<R>) -> Self {
+                Entry {
+                    dir,
+                    iter: dir.children.values_mut(),
+                }
+            }
+
+            #[inline(always)]
+            unsafe fn dir(&mut self) -> &'a mut Directory<R> {
+                &mut *self.dir
+            }
+        }
+        let mut stack = vec![ Entry::new(&mut self.root) ];
+        while let Some(top) = stack.last_mut() {
+            match top.iter.next() {
+                Some(sub) => {
+                    match sub {
+                        HierarchyEntry::Directory(dir) => {
+                            unsafe{ traverser.new_dir(top.dir(), dir); }
+                            stack.push(Entry::new(dir));
+                        }
+                        HierarchyEntry::File(file) => {
+                            unsafe{ traverser.new_file(top.dir(), file); }
+                        }
+                    }
+                }
+                None => {
+                    unsafe {
+                        let mut top = stack.pop().unwrap_unchecked();
+                        traverser.finish_dir(stack.last_mut().map(|e| e.dir()), top.dir());
+                    }
+                }
+            }
+        }
+        traverser
     }
 
     /// # Safety
     /// The stack must be ensured not to be empty before calling this function
-    unsafe fn pop_dirs(&mut self, stack: &mut Vec<*mut Directory<Receiver>>) {
+    unsafe fn pop_dirs<T: Traverser<Receiver>>(&mut self, stack: &mut Vec<*mut Directory<Receiver>>, traverser: &mut T) {
         let mut dir = unsafe{&mut *stack.pop().unwrap_unchecked()};
         while let Some(parent) = stack.pop() {
             let parent = unsafe{&mut *parent};
-            Receiver::finish_dir(Some(parent), dir);
+            traverser.finish_dir(Some(parent), dir);
             dir = parent;
         }
-        Receiver::finish_dir(Some(&mut self.root), dir);
+        traverser.finish_dir(Some(&mut self.root), dir);
     }
 
     #[cfg(debug_assertions)]
@@ -222,15 +289,15 @@ impl HierarchyReceiver for Part1Recv {
     type DirectoryData = Part1Dir;
     type FileData = ();
     const NEEDS_STRICT_FINISH_DIR: bool = true;
+}
 
-    fn new_dir(_parent: &mut Directory<Self>, _dir: &mut Directory<Self>) {}
-
-    fn new_file(parent: &mut Directory<Self>, file: &mut File<Self>) -> bool {
+impl Traverser<Part1Recv> for Part1Recv {
+    fn new_file(&mut self, parent: &mut Directory<Self>, file: &mut File<Self>) -> bool {
         parent.data.total_size += file.size;
         false
     }
 
-    fn finish_dir(mut parent: Option<&mut Directory<Self>>, dir: &mut Directory<Self>) {
+    fn finish_dir(&mut self, mut parent: Option<&mut Directory<Self>>, dir: &mut Directory<Self>) {
         if let Some(ref mut parent) = &mut parent {
             parent.data.subdir_size += dir.data.subdir_size;
             parent.data.total_size += dir.data.total_size;
@@ -255,25 +322,92 @@ impl Default for Part1Dir {
     }
 }
 
-pub fn task(input: &str) -> (usize, ) {
-    // Part 1
-    let mut hier = Hierarchy::<Part1Recv>::default();
-    hier.parse(input.lines());
-    #[cfg(debug_assertions)] {
-        hier.debug_print();
+struct Part2Recv;
+struct Part2Walker {
+    free_needed: usize,
+    min_size: usize,
+}
+
+impl Part2Recv {
+    const MAX_SPACE: usize = 70_000_000 - 30_000_000;
+}
+
+impl Part2Walker {
+    fn new(free_needed: usize) -> Self {
+        Part2Walker {
+            free_needed,
+            min_size: usize::MAX,
+        }
     }
-    (hier.root().data.subdir_size, )
+
+    fn from_root(root: &Part2Dir) -> Self {
+        Self::new(root.total_size - Part2Recv::MAX_SPACE)
+    }
+}
+
+impl HierarchyReceiver for Part2Recv {
+    type DirectoryData = Part2Dir;
+    type FileData = ();
+    const NEEDS_STRICT_FINISH_DIR: bool = true;
+}
+
+impl Traverser<Part2Recv> for Part2Recv {
+    fn new_file(&mut self, parent: &mut Directory<Self>, file: &mut File<Self>) -> bool {
+        parent.data.total_size += file.size;
+        false
+    }
+
+    fn finish_dir(&mut self, parent: Option<&mut Directory<Self>>, dir: &mut Directory<Self>) {
+        if let Some(parent) = parent {
+            parent.data.total_size += dir.data.total_size;
+        }
+    }
+}
+
+impl Traverser<Part2Recv> for Part2Walker {
+    fn new_dir(&mut self, _parent: &mut Directory<Part2Recv>, dir: &mut Directory<Part2Recv>) {
+        if self.free_needed < dir.data.total_size && dir.data.total_size < self.min_size {
+            self.min_size = dir.data.total_size;
+        }
+    }
+}
+
+struct Part2Dir {
+    total_size: usize,
+}
+
+impl Default for Part2Dir {
+    fn default() -> Self {
+        Part2Dir {
+            total_size: 0,
+        }
+    }
+}
+
+pub fn task(input: &str) -> (usize, usize) {
+    // Part 1
+    let p1 = {
+        let mut hier = Hierarchy::<Part1Recv>::default();
+        hier.parse(input.lines(), Part1Recv);
+        #[cfg(debug_assertions)] {
+            hier.debug_print();
+        }
+        hier.root().data.subdir_size
+    };
+
+    // Part 2
+    let p2 = {
+        let mut hier = Hierarchy::<Part2Recv>::default();
+        hier.parse(input.lines(), Part2Recv);
+        hier.walk(Part2Walker::from_root(&hier.root().data)).min_size
+    };
+
+    (p1, p2)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    struct NullHier;
-    impl HierarchyReceiver for NullHier {
-        type DirectoryData = ();
-        type FileData = ();
-    }
 
     #[test]
     fn example() {
@@ -304,16 +438,23 @@ $ ls
 
         // Hierarchy
         {
-            let mut hier = Hierarchy::<NullHier>::default();
-            hier.parse(input.lines());
+            let mut hier = Hierarchy::<()>::default();
+            hier.parse(input.lines(), ());
             hier.debug_print();
         }
 
         // Part 1
         {
             let mut hier = Hierarchy::<Part1Recv>::default();
-            hier.parse(input.lines());
-            println!("{}", hier.root.data.subdir_size);
+            hier.parse(input.lines(), Part1Recv);
+            assert_eq!(95437, hier.root().data.subdir_size);
+        }
+
+        // Part 2
+        {
+            let mut hier = Hierarchy::<Part2Recv>::default();
+            hier.parse(input.lines(), Part2Recv);
+            assert_eq!(24933642, hier.walk(Part2Walker::from_root(&hier.root().data)).min_size);
         }
     }
 }
