@@ -107,8 +107,6 @@ impl<Receiver: ?Sized + HierarchyReceiver> Hierarchy<Receiver> {
                                     line = &sub[2..];
                                     continue 'next_line;
                                 }
-                                let p: *const i32 = &2;
-                                unsafe{ *p };
                                 let parent = unsafe{&mut *stack.last().map(|a| *a).unwrap_or(&mut self.root)};
                                 if sub.starts_with("dir ") {
                                     let name = sub[4..].into();
