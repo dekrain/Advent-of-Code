@@ -16,6 +16,16 @@ mod t5;
 mod t6;
 mod t7;
 mod t8;
+mod t9;
+
+macro unreachable($($args:tt)*) {
+    {
+        #[cfg(debug_assertions)]
+        std::unreachable!($($args)*);
+        #[cfg(not(debug_assertions))]
+        unsafe{ std::hint::unreachable_unchecked(); }
+    }
+}
 
 trait TaskPrint {
     fn print(task: u32, result: Self);
@@ -52,5 +62,5 @@ fn main() {
     macro task($($impl:ident $id:literal)*) {
         $(do_task(concat!("inputs/", stringify!($id), ".input"), $id, $impl::task);)*
     }
-    task![ t1 1 t2 2 t3 3 t4 4 t5 5 t6 6 t7 7 t8 8 ];
+    task![ t1 1 t2 2 t3 3 t4 4 t5 5 t6 6 t7 7 t8 8 t9 9 ];
 }

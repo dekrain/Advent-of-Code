@@ -4,6 +4,8 @@
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct TreeHeight(u8);
 
+use crate::unreachable;
+
 struct BitVec {
     data: Box<[u8]>,
     #[cfg(debug_assertions)]
@@ -29,15 +31,6 @@ impl BitVec {
         #[cfg(debug_assertions)]
         assert!(idx < self.size);
         self.data[idx >> 3] |= 1u8.wrapping_shl(idx as u32);
-    }
-}
-
-macro unreachable($($args:tt)*) {
-    {
-        #[cfg(debug_assertions)]
-        std::unreachable!($($args)*);
-        #[cfg(not(debug_assertions))]
-        unsafe{ std::hint::unreachable_unchecked(); }
     }
 }
 
