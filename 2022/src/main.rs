@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-#![feature(iter_array_chunks, iter_next_chunk, decl_macro, rustc_attrs, new_uninit)]
+#![feature(iter_array_chunks, iter_next_chunk, decl_macro, rustc_attrs, new_uninit, assert_matches)]
 
 use std::{fs, io, os::unix::io::AsFd, fmt::Display};
 
@@ -18,7 +18,7 @@ mod t7;
 mod t8;
 mod t9;
 
-macro unreachable($($args:tt)*) {
+pub(crate) macro unreachable($($args:tt)*) {
     {
         #[cfg(debug_assertions)]
         std::unreachable!($($args)*);
