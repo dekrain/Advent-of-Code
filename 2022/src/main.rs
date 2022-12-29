@@ -17,6 +17,7 @@ mod t6;
 mod t7;
 mod t8;
 mod t9;
+mod t10;
 
 pub(crate) macro unreachable($($args:tt)*) {
     {
@@ -62,5 +63,5 @@ fn main() {
     macro task($($impl:ident $id:literal)*) {
         $(do_task(concat!("inputs/", stringify!($id), ".input"), $id, $impl::task);)*
     }
-    task![ t1 1 t2 2 t3 3 t4 4 t5 5 t6 6 t7 7 t8 8 t9 9 ];
+    task![ t1 1 t2 2 t3 3 t4 4 t5 5 t6 6 t7 7 t8 8 t9 9 t10 10 ];
 }
